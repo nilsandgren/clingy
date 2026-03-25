@@ -10,7 +10,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Qt, QPoint, QSize, QTimer
-from PySide6.QtGui import QColor, QPainter
+from PySide6.QtGui import QColor, QKeySequence, QPainter, QShortcut
 from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
 
 from clingy.note_editor import NoteEditor
@@ -38,6 +38,7 @@ class NoteWindow(QWidget):
         position: QPoint | None = None,
         size: QSize | None = None,
         created_at: str | None = None,
+        minimized: bool = False,
     ):
         super().__init__()
         self.note_id = note_id
@@ -45,6 +46,10 @@ class NoteWindow(QWidget):
         self._color_name = color
         self._theme = get_theme(color)
         self._created_at = created_at or datetime.now().isoformat()
+
+        # Minimize state.
+        self._minimized = False  # will be set via toggle_minimize() below
+        self._expanded_size: QSize | None = None
 
         # Window flags: frameless tool window (no taskbar entry).
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.Tool)
@@ -72,17 +77,32 @@ class NoteWindow(QWidget):
         self._save_timer.timeout.connect(self._auto_save)
         self.editor.textChanged.connect(self._save_timer.start)
 
+        # Ctrl+M shortcut to minimize/restore.
+        shortcut = QShortcut(QKeySequence("Ctrl+M"), self)
+        shortcut.setContext(Qt.WindowShortcut)
+        shortcut.activated.connect(self.toggle_minimize)
+
+        # Apply initial minimized state if requested (must be after timer setup).
+        if minimized:
+            self.toggle_minimize()
+
     # -- Public API ----------------------------------------------------------
 
     def to_dict(self) -> dict:
         """Serialise the note's state to a dict suitable for JSON storage."""
+        # When minimized, persist the expanded size so it restores correctly.
+        if self._minimized and self._expanded_size is not None:
+            w, h = self._expanded_size.width(), self._expanded_size.height()
+        else:
+            w, h = self.width(), self.height()
         return {
             "id": self.note_id,
             "color": self._color_name,
             "content_html": self.editor.toHtml(),
             "position": {"x": self.pos().x(), "y": self.pos().y()},
-            "size": {"width": self.width(), "height": self.height()},
+            "size": {"width": w, "height": h},
             "created_at": self._created_at,
+            "minimized": self._minimized,
         }
 
     def set_color_theme(self, name: str) -> None:
@@ -103,6 +123,33 @@ class NoteWindow(QWidget):
         """Called by TitleBar / ResizeGrip after a drag or resize finishes."""
         self._schedule_save()
 
+    def toggle_minimize(self) -> None:
+        """Toggle between minimized (title bar only) and expanded state."""
+        pos = self.pos()
+        if not self._minimized:
+            # Collapse: remember expanded size, shrink to title bar height.
+            self._expanded_size = self.size()
+            title_h = self._title_bar.height()
+            self.editor.hide()
+            self._resize_grip.hide()
+            self.setFixedHeight(title_h)
+            self._minimized = True
+            self._title_bar.set_minimized(True, self._first_line_text())
+        else:
+            # Expand: restore the remembered size.
+            self._minimized = False
+            self.setMinimumHeight(0)
+            self.setMaximumHeight(16777215)  # QWIDGETSIZE_MAX
+            sz = self._expanded_size or QSize(DEFAULT_WIDTH, DEFAULT_HEIGHT)
+            self.resize(sz)
+            self.editor.show()
+            self._resize_grip.show()
+            self._title_bar.set_minimized(False)
+        # Keep the top edge at the same position.
+        self.move(pos)
+        self.update()
+        self._schedule_save()
+
     # -- Internal build ------------------------------------------------------
 
     def _build_ui(self) -> None:
@@ -118,6 +165,7 @@ class NoteWindow(QWidget):
         )
         self._title_bar.close_requested.connect(self._on_close)
         self._title_bar.new_note_requested.connect(self._on_new_note)
+        self._title_bar.minimize_requested.connect(self.toggle_minimize)
         self._title_bar.color_changed.connect(self.set_color_theme)
         root_layout.addWidget(self._title_bar)
 
@@ -141,7 +189,12 @@ class NoteWindow(QWidget):
         p.setRenderHint(QPainter.Antialiasing)
         p.setBrush(QColor(self._theme["background"]))
         p.setPen(Qt.NoPen)
-        p.drawRoundedRect(self.rect(), 10, 10)
+        if self._minimized:
+            # When collapsed the title bar paints itself fully rounded,
+            # so just fill behind it with the same radius.
+            p.drawRoundedRect(self.rect(), 10, 10)
+        else:
+            p.drawRoundedRect(self.rect(), 10, 10)
         p.end()
 
     # -- Slots ---------------------------------------------------------------
@@ -158,3 +211,13 @@ class NoteWindow(QWidget):
 
     def _auto_save(self) -> None:
         self._manager.save_note(self.note_id)
+
+    def _first_line_text(self) -> str:
+        """Extract the first non-empty line of plain text from the editor."""
+        text = self.editor.toPlainText()
+        for line in text.splitlines():
+            stripped = line.strip()
+            if stripped:
+                # Truncate long lines so they fit in the title bar.
+                return stripped[:60] + ("\u2026" if len(stripped) > 60 else "")
+        return ""

@@ -24,6 +24,7 @@ persist across restarts and the application lives in the system tray.
 | `Ctrl+Shift+L`       | Toggle bullet list    |
 | `Ctrl++` / `Ctrl+=`  | Increase font size    |
 | `Ctrl+-`             | Decrease font size    |
+| `Ctrl+M`             | Minimize/restore      |
 
 ## Quick Start
 

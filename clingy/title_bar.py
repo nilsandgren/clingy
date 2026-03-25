@@ -1,13 +1,15 @@
 """Custom title bar for frameless sticky note windows.
 
 Provides drag-to-move, a color picker (clicking the color dot),
-a new-note button (+), and a close button (x).
+a new-note button (+), a close button (x), and double-click to
+minimize/restore.
 """
 
 from PySide6.QtCore import Qt, Signal, QPoint, QSize
-from PySide6.QtGui import QColor, QPainter, QMouseEvent
+from PySide6.QtGui import QColor, QFont, QPainter, QMouseEvent
 from PySide6.QtWidgets import (
     QHBoxLayout,
+    QLabel,
     QPushButton,
     QSizePolicy,
     QWidget,
@@ -97,6 +99,7 @@ class TitleBar(QWidget):
 
     close_requested = Signal()
     new_note_requested = Signal()
+    minimize_requested = Signal()
     color_changed = Signal(str)  # emits theme name
 
     BUTTON_STYLE = """
@@ -154,6 +157,16 @@ class TitleBar(QWidget):
         self._btn_close.clicked.connect(self.close_requested)
         layout.addWidget(self._btn_close)
 
+        # Preview label (visible only when minimized).
+        self._preview_label = QLabel()
+        self._preview_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        self._preview_label.hide()
+        self._update_preview_style(text_color)
+        # Inserted between the color dot and the stretch; initially hidden.
+        layout.insertWidget(1, self._preview_label, stretch=1)
+
+        self._is_minimized = False
+
     # -- Public API -------------------------------------------------------
 
     def set_theme_colors(self, title_color: str, accent_color: str,
@@ -164,6 +177,17 @@ class TitleBar(QWidget):
         btn_style = self.BUTTON_STYLE.format(text=text_color)
         self._btn_new.setStyleSheet(btn_style)
         self._btn_close.setStyleSheet(btn_style)
+        self._update_preview_style(text_color)
+        self.update()
+
+    def set_minimized(self, minimized: bool, preview_text: str = "") -> None:
+        """Update the title bar appearance for minimized / expanded state."""
+        self._is_minimized = minimized
+        if minimized:
+            self._preview_label.setText(preview_text)
+            self._preview_label.show()
+        else:
+            self._preview_label.hide()
         self.update()
 
     # -- Painting ---------------------------------------------------------
@@ -173,11 +197,15 @@ class TitleBar(QWidget):
         p.setRenderHint(QPainter.Antialiasing)
         p.setBrush(QColor(self._title_color))
         p.setPen(Qt.NoPen)
-        # Rounded top corners, square bottom corners.
         rect = self.rect()
-        # Draw full rounded rect then cover bottom corners.
-        p.drawRoundedRect(rect.adjusted(0, 0, 0, 6), 10, 10)
-        p.drawRect(rect.adjusted(0, rect.height() - 6, 0, 0))
+        if self._is_minimized:
+            # Fully rounded when the note is collapsed (no body below).
+            p.drawRoundedRect(rect, 10, 10)
+        else:
+            # Rounded top corners, square bottom corners.
+            # Draw full rounded rect then cover bottom corners.
+            p.drawRoundedRect(rect.adjusted(0, 0, 0, 6), 10, 10)
+            p.drawRect(rect.adjusted(0, rect.height() - 6, 0, 0))
         p.end()
 
     # -- Drag-to-move -----------------------------------------------------
@@ -213,6 +241,11 @@ class TitleBar(QWidget):
                 win.on_geometry_changed()
             event.accept()
 
+    def mouseDoubleClickEvent(self, event: QMouseEvent) -> None:  # noqa: N802
+        if event.button() == Qt.LeftButton:
+            self.minimize_requested.emit()
+            event.accept()
+
     # -- Color picker ----------------------------------------------------
 
     def _show_color_picker(self) -> None:
@@ -222,3 +255,17 @@ class TitleBar(QWidget):
         dot_pos = self._color_dot.mapToGlobal(QPoint(0, self._color_dot.height() + 4))
         popup.move(dot_pos)
         popup.show()
+
+    def _update_preview_style(self, text_color: str) -> None:
+        """Apply styling to the preview label."""
+        self._preview_label.setStyleSheet(f"""
+            QLabel {{
+                color: {text_color};
+                background: transparent;
+                font-size: 11px;
+                padding-left: 4px;
+            }}
+        """)
+        font = self._preview_label.font()
+        font.setItalic(True)
+        self._preview_label.setFont(font)

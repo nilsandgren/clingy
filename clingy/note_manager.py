@@ -48,6 +48,7 @@ class NoteManager(QObject):
         content: str = "",
         note_id: Optional[str] = None,
         created_at: Optional[str] = None,
+        minimized: bool = False,
     ) -> NoteWindow:
         """Create a new sticky note and show it."""
         if note_id is None:
@@ -63,6 +64,7 @@ class NoteManager(QObject):
             position=position,
             size=size,
             created_at=created_at,
+            minimized=minimized,
         )
         self._notes[note_id] = win
         win.show()
@@ -101,6 +103,7 @@ class NoteManager(QObject):
                 position=_point_from_dict(data.get("position")),
                 size=_size_from_dict(data.get("size")),
                 created_at=data.get("created_at"),
+                minimized=data.get("minimized", False),
             )
 
     def show_all(self) -> None:
