@@ -3,6 +3,8 @@
 Create colorful, frameless sticky notes that float on your desktop. Notes
 persist across restarts and the application lives in the system tray.
 
+![Screenshot](./clingy.png)
+
 ## Features
 
 - **Frameless windows** — no title bar or standard window decorations.
