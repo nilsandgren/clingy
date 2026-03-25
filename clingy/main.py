@@ -27,6 +27,9 @@ def main() -> None:
     if manager.note_count() == 0:
         manager.create_note()
 
+    # Bring all notes to the front so they are not hidden behind other windows.
+    manager.show_all()
+
     # Save everything on shutdown.
     app.aboutToQuit.connect(manager.save_all)
 
