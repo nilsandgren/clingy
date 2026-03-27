@@ -24,9 +24,9 @@ persist across restarts and the application lives in the system tray.
 | `Ctrl+-`             | Decrease font size    |
 | `Ctrl+M`             | Minimize/restore      |
 
-## Quick Start
+## Quick Start - Run from command line
 
-First the virtual Python environment containing Clingy's runtime dependencies needs to be created.
+Create the virtual Python environment containing Clingy's runtime dependencies.
 You only need to run this command once.
 
 ```bash
@@ -39,9 +39,41 @@ Launch the application
 ./run.sh
 ```
 
+## Run as systemd service
+
+Clingy can be installed as a systemd user service so it can be managed with
+`systemctl` and optionally auto-started on login.
+
+### Install
+
+```bash
+./install.sh
+```
+
+This copies the application to `~/.local/share/clingy/`, creates a virtual
+environment, and installs the systemd user service.
+
+### Manage the service
+
+```bash
+systemctl --user start   clingy   # start now
+systemctl --user stop    clingy   # stop now
+systemctl --user enable  clingy   # auto-start on login
+systemctl --user disable clingy   # disable auto-start
+systemctl --user status  clingy   # check status
+journalctl --user -u clingy -f    # view logs
+```
+
+### Uninstall
+
+```bash
+./uninstall.sh          # keeps saved notes
+./uninstall.sh --purge  # also removes saved notes
+```
+
 ## Requirements
 
 - Python 3.10+
-- PySide6 >= 6.5.0 (installed by setup.sh) 
+- PySide6 >= 6.5.0 (installed by setup.sh)
 
 Tested on Ubuntu 24.04 using GNOME with Wayland.
