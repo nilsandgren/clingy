@@ -51,8 +51,8 @@ class NoteWindow(QWidget):
         self._minimized = False  # will be set via toggle_minimize() below
         self._expanded_size: QSize | None = None
 
-        # Window flags: frameless tool window (no taskbar entry).
-        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Tool)
+        # Window flags: frameless window (appears in taskbar / Alt-Tab).
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Window)
         self.setAttribute(Qt.WA_TranslucentBackground)
 
         # Geometry.
