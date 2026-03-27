@@ -14,6 +14,8 @@ set -euo pipefail
 INSTALL_DIR="$HOME/.local/share/clingy"
 SERVICE_DIR="$HOME/.config/systemd/user"
 SERVICE_FILE="clingy.service"
+DESKTOP_DIR="$HOME/.local/share/applications"
+ICON_DIR="$HOME/.local/share/icons/hicolor/512x512/apps"
 PURGE=false
 
 for arg in "$@"; do
@@ -43,7 +45,21 @@ if [ -f "$SERVICE_DIR/$SERVICE_FILE" ]; then
     echo "  Service file removed"
 fi
 
-# -- 3. Remove installed application -----------------------------------------
+# -- 3. Remove desktop entry and icon ----------------------------------------
+if [ -f "$DESKTOP_DIR/clingy.desktop" ]; then
+    rm "$DESKTOP_DIR/clingy.desktop"
+    if command -v update-desktop-database &>/dev/null; then
+        update-desktop-database "$DESKTOP_DIR" 2>/dev/null || true
+    fi
+    echo "  Desktop entry removed"
+fi
+
+if [ -f "$ICON_DIR/clingy.png" ]; then
+    rm "$ICON_DIR/clingy.png"
+    echo "  Icon removed"
+fi
+
+# -- 4. Remove installed application -----------------------------------------
 if [ -d "$INSTALL_DIR" ]; then
     # Always remove the application code and venv
     rm -rf "$INSTALL_DIR/clingy"

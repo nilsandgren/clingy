@@ -5,13 +5,14 @@ import sys
 from PySide6.QtWidgets import QApplication
 
 from clingy.note_manager import NoteManager
-from clingy.tray_icon import TrayIcon
+from clingy.tray_icon import TrayIcon, app_icon
 
 
 def main() -> None:
     app = QApplication(sys.argv)
     app.setApplicationName("Clingy")
     app.setDesktopFileName("clingy")
+    app.setWindowIcon(app_icon())
 
     # Keep the app running when all windows are hidden (tray keeps it alive).
     app.setQuitOnLastWindowClosed(False)

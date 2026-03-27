@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Clingy
+Comment=Colorful sticky notes for your desktop
+Icon=clingy
+Terminal=false
+Categories=Utility;
+Keywords=notes;sticky;desktop;
+StartupWMClass=clingy

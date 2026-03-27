@@ -6,14 +6,22 @@ visibility, and quitting.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QAction, QColor, QIcon, QPainter, QPixmap
+from PySide6.QtGui import QAction, QIcon
 from PySide6.QtWidgets import QMenu, QSystemTrayIcon
 
 if TYPE_CHECKING:
     from clingy.note_manager import NoteManager
+
+# Path to the application icon bundled in the package.
+_ICON_PATH = Path(__file__).resolve().parent / "resources" / "icons" / "clingy.png"
+
+
+def app_icon() -> QIcon:
+    """Return the shared Clingy application icon."""
+    return QIcon(str(_ICON_PATH))
 
 
 class TrayIcon(QSystemTrayIcon):
@@ -23,7 +31,7 @@ class TrayIcon(QSystemTrayIcon):
         super().__init__()
         self._manager = manager
 
-        self.setIcon(self._create_icon())
+        self.setIcon(app_icon())
         self.setToolTip("Clingy")
 
         # Context menu.
@@ -67,20 +75,5 @@ class TrayIcon(QSystemTrayIcon):
 
     # -- Icon generation -----------------------------------------------------
 
-    @staticmethod
-    def _create_icon() -> QIcon:
-        """Draw a simple sticky-note icon programmatically."""
-        pixmap = QPixmap(64, 64)
-        pixmap.fill(Qt.transparent)
-        p = QPainter(pixmap)
-        p.setRenderHint(QPainter.Antialiasing)
-        # Note body.
-        p.setBrush(QColor("#FDFD96"))
-        p.setPen(QColor("#E0D86E"))
-        p.drawRoundedRect(4, 4, 56, 56, 8, 8)
-        # A couple of ruled lines.
-        p.setPen(QColor("#D0D060"))
-        for y in (22, 34, 46):
-            p.drawLine(12, y, 52, y)
-        p.end()
-        return QIcon(pixmap)
+    # The application icon is now loaded from clingy/resources/icons/clingy.png
+    # via the module-level app_icon() helper.
