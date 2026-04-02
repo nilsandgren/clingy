@@ -43,11 +43,11 @@ class TrayIcon(QSystemTrayIcon):
 
         menu.addSeparator()
 
-        show_action = QAction("Show All Notes", menu)
+        show_action = QAction("Show", menu)
         show_action.triggered.connect(self._manager.show_all)
         menu.addAction(show_action)
 
-        hide_action = QAction("Hide All Notes", menu)
+        hide_action = QAction("Hide", menu)
         hide_action.triggered.connect(self._manager.hide_all)
         menu.addAction(hide_action)
 
